@@ -63,6 +63,6 @@ for (const [id, invariant, description, target, needle, replacement] of cases) {
 rmSync(tmp, { recursive: true, force: true });
 const escaped = results.filter(result => !result.detected);
 const report = [`# Mutation and Adversarial Verification Report`, ``, `Candidate SHA-256: \`${sha}\``, ``, `Genuine isolated-copy verifier replay: **YES**`, ``, `| ID | Invariant | Result | Exit | Target |`, `|---|---|---|---:|---|`, ...results.map(result => `| ${result.id} | ${result.invariant} — ${result.description} | ${result.detected ? 'DETECTED' : 'ESCAPED_MUTATION'} | ${result.exit_code} | isolated copy |`), ``, `Total mutations attempted: **${results.length}**`, `Mutations detected: **${results.length - escaped.length}**`, `Escaped mutations: **${escaped.length}**`, ``, `Each mutation started from the exact good candidate, changed one isolated copy, executed the verifier, and required a non-zero result. The canonical candidate was not modified.`];
-mkdirSync(join(root, 'evidence'), { recursive: true }); writeFileSync(join(root, 'evidence/MUTATION_ADVERSARIAL_REPORT.md'), report.join('\n') + '\n');
+mkdirSync(join(root, 'evidence/deterministic'), { recursive: true }); writeFileSync(join(root, 'evidence/deterministic/MUTATION_ADVERSARIAL_REPORT.md'), report.join('\n') + '\n');
 console.log(`genuine_mutation_replay: attempted=${results.length} detected=${results.length - escaped.length} escaped=${escaped.length}`);
 if (escaped.length) process.exitCode = 1;
