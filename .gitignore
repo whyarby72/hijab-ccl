@@ -1,0 +1,14 @@
+node_modules/
+coverage/
+dist/
+build/
+.tmp/
+.cache/
+*.log
+.DS_Store
+Thumbs.db
+.env
+.env.*
+*extraction*
+*replay*
+*browser-profile*

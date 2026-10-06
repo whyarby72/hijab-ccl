@@ -1,0 +1,93 @@
+{
+  "schema": "mhccl_pre_codex_acceptance_v1",
+  "product": "Modest/Hijab Capsule Closet Lite",
+  "decision": "TEST",
+  "build_authorized": false,
+  "baseline_artifact": "MODEST_HIJAB_CAPSULE_CLOSET_v3.1e_UI_COPY_ACCESSIBILITY_RECONCILED_CANDIDATE.html",
+  "baseline_sha256": "7b809352dfd0e46a7e5161a5630de41e956847a08f2b79babcde34bdaa086f4d",
+  "required_acceptance": [
+    {
+      "id": "AC-001",
+      "requirement": "Exact v3.1e baseline is imported without unreviewed semantic changes."
+    },
+    {
+      "id": "AC-002",
+      "requirement": "DraftGarment supports edit category/label/photo before Outfit commit."
+    },
+    {
+      "id": "AC-003",
+      "requirement": "Cancel/Back during DraftGarment edit restores prior draft values."
+    },
+    {
+      "id": "AC-004",
+      "requirement": "Stale async photo completion cannot mutate a closed/canceled DraftGarment edit."
+    },
+    {
+      "id": "AC-005",
+      "requirement": "DraftGarment edit never commits a Garment before parent Outfit save."
+    },
+    {
+      "id": "AC-006",
+      "requirement": "Exact duplicate decision exposes Keep editing/Open saved outfit/Save another version."
+    },
+    {
+      "id": "AC-007",
+      "requirement": "Closing/Back from duplicate decision is non-destructive and equivalent to Keep editing."
+    },
+    {
+      "id": "AC-008",
+      "requirement": "Open saved outfit discards only the duplicate draft and opens the existing committed Outfit."
+    },
+    {
+      "id": "AC-009",
+      "requirement": "Save another version intentionally commits another Outfit."
+    },
+    {
+      "id": "AC-010",
+      "requirement": "Duplicate decision instrumentation records all three choices without free-text/media."
+    },
+    {
+      "id": "AC-011",
+      "requirement": "All existing v3.1e regression invariants remain green."
+    },
+    {
+      "id": "AC-012",
+      "requirement": "Sanitized evidence still excludes photo bytes, short labels, and practical-note text."
+    },
+    {
+      "id": "AC-013",
+      "requirement": "No cloud/backend/auth/AI/ads/sync/recommendation feature is introduced."
+    },
+    {
+      "id": "AC-014",
+      "requirement": "Repository provides one deterministic verification entrypoint."
+    },
+    {
+      "id": "AC-015",
+      "requirement": "Mutation/negative controls remain capable of detecting protected invariant breakage."
+    },
+    {
+      "id": "AC-016",
+      "requirement": "Any runtime/manual/device claims remain HOLD until actually executed in that environment."
+    }
+  ],
+  "deferred_final_verification": [
+    "physical Android",
+    "TalkBack",
+    "system Back on target device",
+    "local-file or final declared runtime",
+    "storage close/reopen",
+    "text scaling/reflow",
+    "photo picker and decode/compression",
+    "Matrix horizontal + page vertical gestures",
+    "Downloads/evidence retrieval",
+    "safe-area/system UI",
+    "8-tester behavioral cohort"
+  ],
+  "authority_effects": {
+    "production_build": false,
+    "artifact_freeze": false,
+    "release": false,
+    "publication": false
+  }
+}

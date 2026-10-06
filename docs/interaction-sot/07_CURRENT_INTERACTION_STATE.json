@@ -1,0 +1,66 @@
+{
+  "schema": "MODEST_HIJAB_CAPSULE_CLOSET_INTERACTION_STATE_v1",
+  "canonical_product_name": "Modest/Hijab Capsule Closet Lite",
+  "decision": "TEST",
+  "build_authorized": false,
+  "interaction_depth": "FULL_INTERACTIVE_SOFTWARE",
+  "canonical_onboarding": "OUTFIT_FIRST",
+  "first_value": "FIRST_SAVED_KNOWN_GOOD_OUTFIT",
+  "core_activation": "THIRD_SAVED_OUTFIT_PLUS_CAPSULE_MATRIX_VIEWED",
+  "superseded_provenance": {
+    "old_activation_hypothesis": "10 pieces + 3 saved outfits",
+    "state": "SUPERSEDED_FOR_CURRENT_TEST"
+  },
+  "primary_surfaces": [
+    "OUTFITS_HOME",
+    "CAPSULE_OVERVIEW"
+  ],
+  "nested_material_surfaces": [
+    "OUTFIT_BUILDER",
+    "ADD_PIECE",
+    "SAVE_SUCCESS",
+    "ACTIVATION_MATRIX",
+    "OUTFIT_DETAIL",
+    "HIJAB_OPTIONS_EDITOR",
+    "AVAILABILITY_SHEET",
+    "PRACTICAL_NOTE_EDITOR",
+    "HIJAB_PAIRING_MATRIX",
+    "TEST_TOOLS"
+  ],
+  "pretest_readiness": {
+    "product_truth": "READY",
+    "domain_model": "READY",
+    "state_lifecycle": "READY_WITH_IMPLEMENTATION_DEBT",
+    "master_wireflow": "READY",
+    "action_contract": "READY_WITH_IMPLEMENTATION_DEBT",
+    "recovery_contract": "READY_WITH_IMPLEMENTATION_DEBT",
+    "test_evidence_privacy": "READY_WITH_IMPLEMENTATION_DEBT",
+    "real_android_environment": "UNVERIFIED",
+    "overall": "NOT_READY"
+  },
+  "required_artifact_repairs_before_next_cohort": [
+    "visible_done_for_now_after_save_success",
+    "add_piece_dirty_guard",
+    "async_photo_operation_token_and_stale_callback_drop",
+    "availability_autosave_truth_copy_and_feedback",
+    "representative_hijab_availability_truth",
+    "sanitized_default_evidence_json",
+    "note_editor_false_dirty_fix"
+  ],
+  "behavioral_hypotheses_preserved": [
+    "garment_decomposition_acceptance",
+    "capsule_matrix_comprehension_and_value",
+    "hijab_options_incremental_value",
+    "availability_utility",
+    "same_base_different_hijab_grouping",
+    "two_destination_navigation_repeat_use_fit",
+    "photo_optionality_practicality"
+  ],
+  "next_stage": "PATCH_BEHAVIORAL_ARTIFACT_TO_INTERACTION_SOT_AND_REPLAY",
+  "authority_effects": {
+    "build": "NONE",
+    "artifact_freeze": "NONE",
+    "release": "NONE",
+    "publication": "NONE"
+  }
+}
