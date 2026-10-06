@@ -39,10 +39,13 @@
     "name": "modest-hijab-capsule-closet-lite",
     "visibility": "PUBLIC",
     "default_branch": "main",
-    "url": null,
-    "main_head_sha": "d9e4c8817c7a573629511f1efb737727f69a96f6",
-    "bootstrap_status": "PENDING_GITHUB_AUTH",
-    "ci_result": "NOT_RUN_ON_GITHUB"
+    "url": "https://github.com/whyarby72/modest-hijab-capsule-closet-lite",
+    "main_head_sha": "60baa81398f9916defaad8dd06a1415d02c64629",
+    "bootstrap_status": "PUBLIC_GITHUB_BOOTSTRAP_PASS",
+    "ci_result": "PASS",
+    "actions_run_url": "https://github.com/whyarby72/modest-hijab-capsule-closet-lite/actions/runs/37543284153",
+    "actions_run_id": 37543284153,
+    "next_owner": "ChatGPT AI-PROD reconciliation"
   },
-  "final_status": "PUBLIC_GITHUB_BOOTSTRAP_HOLD"
+  "final_status": "PUBLIC_GITHUB_BOOTSTRAP_PASS"
 }
