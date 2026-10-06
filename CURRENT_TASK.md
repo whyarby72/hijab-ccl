@@ -1,8 +1,8 @@
-# CURRENT_TASK — ChatGPT → Codex Intake
+# CURRENT_TASK — Public GitHub Bootstrap
 
 ## Task ID
 
-`MHCCl-TEST-CODEX-001`
+`MHCCl-PUBLIC-GITHUB-BOOTSTRAP-001`
 
 ## Goal
 
