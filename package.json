@@ -1,0 +1,8 @@
+{
+  "name": "mhccl-test-codex-001",
+  "private": true,
+  "scripts": {
+    "verify": "node scripts/verify.mjs && node scripts/mutation-runner.mjs",
+    "verify:deterministic": "node scripts/verify.mjs"
+  }
+}

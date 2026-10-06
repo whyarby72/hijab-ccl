@@ -1,0 +1,26 @@
+{
+  "previous_candidate_sha256": "ef3ee3e1d9134884b2ab9b71b6f0ca72f011a43d4993a2dbf3448ba769558d46",
+  "candidate_sha256": "861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171",
+  "verification_command": "npm run verify",
+  "deterministic_result": "81/81 PASS",
+  "mutation_result": {
+    "attempted": 27,
+    "detected": 27,
+    "escaped": 0,
+    "adversarial": "6/6 PASS"
+  },
+  "families": [
+    {"id":"FLOW_TRUTH","status":"PASS","guards":["Outfit remains primary saved memory","third save keeps Matrix voluntary","no old 10-piece gate","reuse uses committed IDs","main-piece save validity"]},
+    {"id":"DRAFT_ASYNC_RECOVERY","status":"PASS","guards":["Add Piece stale callback guard","Hijab stale callback guard","Draft edit snapshot","dirty Builder discard guard","pairing rollback","duplicate save failure has no false success"]},
+    {"id":"DUPLICATE_DECISION","status":"PASS","guards":["duplicate keep-editing action","duplicate open-saved action","duplicate save-another action","duplicate close/back safety","duplicate decision instrumentation"]},
+    {"id":"AVAILABILITY","status":"PASS","guards":["availability autosave","saved memory survives availability","available alternative hijab is selected truthfully"]},
+    {"id":"PRACTICAL_NOTE","status":"PASS","guards":["note false-dirty guard","privacy excludes source/free text"]},
+    {"id":"HIJAB_SEMANTICS","status":"PASS","guards":["hijab relation is user-saved","empty relation is not incompatible","explicit DraftHijab removal"]},
+    {"id":"MATRIX_SEMANTICS","status":"PASS","guards":["native semantic relation table","accessible hit/miss state","relation cells not tabbable/grid","Matrix vertical pan preserved"]},
+    {"id":"ACCESSIBILITY_INTERACTION","status":"PASS","guards":["modal semantics","focus containment/restoration","Escape safe","both bottom-nav current states","programmatic pressed state","live processing/saved feedback"]},
+    {"id":"EVIDENCE_PRIVACY","status":"PASS","guards":["privacy excludes source/free text","sanitized fixture excludes label/photo bytes"]},
+    {"id":"CLAIM_CEILING","status":"PASS","guards":["claim ceiling documented","no device/manual claim is promoted by deterministic verification"]}
+  ],
+  "source_bytes_changed_during_closure": true,
+  "source_change_reason": "AC-007 duplicate-decision Back precedence correction"
+}
