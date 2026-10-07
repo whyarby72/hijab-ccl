@@ -1,0 +1,64 @@
+name: html-image-fixtures
+
+on:
+  push:
+    branches:
+      - html-image-fixture-emulator-v0.1
+    paths:
+      - "tests/image-fixtures/**"
+      - ".github/workflows/html-image-fixtures.yml"
+      - "prototype/index.html"
+  pull_request:
+    paths:
+      - "tests/image-fixtures/**"
+      - ".github/workflows/html-image-fixtures.yml"
+      - "prototype/index.html"
+
+permissions:
+  contents: read
+
+jobs:
+  fixture-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify canonical HTML SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(sha256sum prototype/index.html | awk '{print $1}')"
+          expected="861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171"
+          test "$actual" = "$expected"
+          echo "Canonical HTML SHA verified: $actual"
+      - name: Generate deterministic image fixtures
+        run: python3 tests/image-fixtures/generate_fixtures.py
+      - name: Replay fixture generation and prove determinism
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tests/image-fixtures/generated/manifest.json /tmp/manifest.first.json
+          rm -rf tests/image-fixtures/generated
+          python3 tests/image-fixtures/generate_fixtures.py >/tmp/fixture-output.txt
+          diff -u /tmp/manifest.first.json tests/image-fixtures/generated/manifest.json
+      - name: Validate manifest hashes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, hashlib
+          from pathlib import Path
+          root=Path("tests/image-fixtures/generated")
+          m=json.loads((root/"manifest.json").read_text())
+          assert len(m["fixtures"]) == 10
+          for x in m["fixtures"]:
+              p=root/x["filename"]
+              assert p.is_file()
+              assert hashlib.sha256(p.read_bytes()).hexdigest()==x["sha256"]
+              assert p.stat().st_size==x["bytes"]
+          print("fixture manifest PASS:", len(m["fixtures"]))
+          PY
+      - name: Upload fixture pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: mhccl-html-image-fixtures
+          path: tests/image-fixtures/generated/
+          if-no-files-found: error
