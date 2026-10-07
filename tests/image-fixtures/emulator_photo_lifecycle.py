@@ -276,7 +276,7 @@ def main():
         cdp.eval("localStorage.clear(); location.reload(); true")
         time.sleep(1.0)
         cdp.close(); cdp=CDP()
-        cdp.wait(sx("S.screen==='launch'"),20,label="clean launch")
+        cdp.wait("typeof window.APP==='object' && document.body.innerText.includes('Save my first outfit')",20,label="clean launch")
         capture(evidence,"00_clean_launch")
 
         cdp.eval("window.APP.startFirst(); window.APP.openAdd(); window.APP.pickCat('TOP'); true")
