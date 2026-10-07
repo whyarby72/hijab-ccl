@@ -187,7 +187,9 @@ def capture(outdir,name):
     p=run("adb","exec-out","screencap","-p",check=True,text=False,capture=True)
     (outdir/(name+".png")).write_bytes(p.stdout)
 
-def js_photo_signature(cdp, ref="S.addForm&&S.addForm.imageData||''"):
+def js_photo_signature(cdp, ref=None):
+    if ref is None:
+        ref="((JSON.parse(localStorage.getItem('mhccl_v31e_ui_copy_accessibility_candidate_state')||'{}').addForm||{}).imageData||'')"
     expr=f"""(async()=>{{
       const s={ref};
       if(!s)return {{len:0,sha256:'',prefix:''}};
@@ -200,6 +202,7 @@ def js_photo_signature(cdp, ref="S.addForm&&S.addForm.imageData||''"):
 
 def js_image_dims(cdp):
     return cdp.eval("""(async()=>{
+      const S=JSON.parse(localStorage.getItem('mhccl_v31e_ui_copy_accessibility_candidate_state')||'{}');
       const s=S.addForm&&S.addForm.imageData||'';
       if(!s)return {w:0,h:0,prefix:''};
       const img=new Image(); img.src=s; await img.decode();
@@ -215,19 +218,22 @@ def select_photo(cdp,filename):
     trigger_picker(cdp)
     pick_document(filename)
     wait_until(lambda: PACKAGE in foreground(),15,label="app foreground after picker")
-    cdp.wait("!!(S.addForm && !S.addForm.photoPending && S.addForm.imageData)",25,label="photo processed")
+    cdp.wait(sx("!!(S.addForm && !S.addForm.photoPending && S.addForm.imageData)"),25,label="photo processed")
     return js_photo_signature(cdp)
 
 def state(cdp):
-    return cdp.eval("""(()=>({
-      screen:S.screen,
-      addOpen:S.addOpen,
-      draftCount:S.draft?S.draft.draftGarments.length:0,
-      draft:S.draft?S.draft.draftGarments.map(g=>({category:g.category,hasPhoto:!!g.imageData,imageLen:(g.imageData||'').length})):[],
-      garmentCount:S.garments.length,
-      outfitCount:S.outfits.length,
-      committed:S.garments.map(g=>({category:g.category,hasPhoto:!!g.imageData,imageLen:(g.imageData||'').length}))
-    }))()""")
+    return cdp.eval("""(()=>{
+      const S=JSON.parse(localStorage.getItem('mhccl_v31e_ui_copy_accessibility_candidate_state')||'{}');
+      return {
+        screen:S.screen,
+        addOpen:S.addOpen,
+        draftCount:S.draft?S.draft.draftGarments.length:0,
+        draft:S.draft?S.draft.draftGarments.map(g=>({category:g.category,hasPhoto:!!g.imageData,imageLen:(g.imageData||'').length})):[],
+        garmentCount:(S.garments||[]).length,
+        outfitCount:(S.outfits||[]).length,
+        committed:(S.garments||[]).map(g=>({category:g.category,hasPhoto:!!g.imageData,imageLen:(g.imageData||'').length}))
+      };
+    })()""")
 
 def main():
     ap=argparse.ArgumentParser()
