@@ -190,7 +190,8 @@ fi
 
 # 5) Tiny + large memory smoke in one unsaved draft.
 tap_node "Save"
-tap_node "+ Add a piece"
+# After the first committed outfit, Builder exposes existing garments and the add CTA becomes "+ Add new".
+tap_node "+ Add new"
 tap_node "Outer"
 publish_fixture "tiny_boundary.png"
 tap_node "Choose local photo"
