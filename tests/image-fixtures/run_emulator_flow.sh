@@ -30,8 +30,8 @@ adb install -r "$APK"
 adb shell pm clear "$PKG" >/dev/null
 adb shell rm -rf /data/local/tmp/MHCClFixtures
 adb shell mkdir -p /data/local/tmp/MHCClFixtures
+adb shell rm -rf /sdcard/Pictures/MHCClFixtureCurrent
 adb shell mkdir -p /sdcard/Pictures/MHCClFixtureCurrent
-adb shell rm -f /sdcard/Pictures/MHCClFixtureCurrent/current.png
 for f in "$FIXTURE_SRC"/tests/image-fixtures/generated/*.png; do
   adb push "$f" /data/local/tmp/MHCClFixtures/
 done
@@ -88,8 +88,9 @@ tap_node(){
 publish_fixture(){
   local filename="$1"
   local src="/data/local/tmp/MHCClFixtures/$filename"
-  local dst="/sdcard/Pictures/MHCClFixtureCurrent/current.png"
+  local dst="/sdcard/Pictures/MHCClFixtureCurrent/$filename"
   adb shell cp "$src" "$dst"
+  adb shell touch "$dst"
   adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$dst" >/dev/null || true
   sleep 2
   log PUBLISH_FIXTURE "$filename -> $dst"
@@ -154,9 +155,15 @@ shot 04_saved
 adb shell am force-stop "$PKG"
 sleep 2
 adb shell am start -n "$PKG/$ACT" >/dev/null
-wait_node "1 saved outfit" 40 || fail "saved outfit missing after force-stop/relaunch"
-shot 05_reopen_persisted
-log PERSISTENCE "1 saved outfit visible after force-stop/relaunch"
+wait_node "First outfit saved" 40 || fail "saved success state missing after force-stop/relaunch"
+wait_node "Top 1" 10 || fail "persisted Top 1 missing after relaunch"
+wait_node "Bottom 1" 10 || fail "persisted Bottom 1 missing after relaunch"
+shot 05_reopen_success_persisted
+log PERSISTENCE "success state with Top 1 + Bottom 1 restored after force-stop/relaunch"
+tap_node "Done for now"
+wait_node "1 saved outfit" 30 || fail "saved outfit missing after leaving restored success state"
+shot 05b_home_persisted
+log PERSISTENCE_HOME "1 saved outfit visible on Home after restored success state"
 
 # Supporting machine evidence: data URL should exist in WebView storage.
 if adb shell run-as "$PKG" sh -c "grep -R -a -m1 'data:image/png;base64' app_webview 2>/dev/null" >/tmp/image_storage_hit.txt 2>/dev/null; then
