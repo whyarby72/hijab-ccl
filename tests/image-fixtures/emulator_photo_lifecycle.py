@@ -5,7 +5,12 @@ import websocket
 
 PACKAGE="com.aiprod.hijabccl.test"
 COMPONENT=PACKAGE + "/com.aiprod.hijabccl.MainActivity"
+STATE_KEY="mhccl_v31e_ui_copy_accessibility_candidate_state"
+STATE_EXPR="JSON.parse(localStorage.getItem('mhccl_v31e_ui_copy_accessibility_candidate_state')||'{}')"
 PORT=9222
+
+def sx(expr):
+    return "(()=>{const S=" + STATE_EXPR + "; return (" + expr + ");})()"
 
 def run(*args, check=True, text=True, capture=True):
     cmd=list(args)
