@@ -105,7 +105,7 @@ adb shell am start -n "$PKG/$ACT" >/dev/null
 wait_node "Save my first outfit" 40 || fail "launch screen unavailable"
 shot 00_launch
 tap_node "Save my first outfit"
-tap_node "Add new"
+tap_node "+ Add a piece"
 tap_node "Top"
 tap_node "Choose local photo"
 select_file "top_white_01.png"
@@ -120,7 +120,7 @@ shot 02_replaced
 tap_node "Add to outfit"
 
 # Bottom: exercise picker cancel then select.
-tap_node "Add new"
+tap_node "+ Add a piece"
 tap_node "Bottom"
 tap_node "Choose local photo"
 sleep 2
@@ -154,7 +154,7 @@ fi
 
 # 5) Tiny + large memory smoke in one unsaved draft.
 tap_node "Save"
-tap_node "Add new"
+tap_node "+ Add a piece"
 tap_node "Outer"
 tap_node "Choose local photo"
 select_file "tiny_boundary.png"
