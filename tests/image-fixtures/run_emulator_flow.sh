@@ -28,12 +28,14 @@ log BUILD "apk_sha=$APK_SHA html_sha=$HTML_SHA"
 # 2) Install app and real fixture files.
 adb install -r "$APK"
 adb shell pm clear "$PKG" >/dev/null
-adb shell mkdir -p /sdcard/Download/MHCClFixtures
+adb shell rm -rf /data/local/tmp/MHCClFixtures
+adb shell mkdir -p /data/local/tmp/MHCClFixtures
+adb shell mkdir -p /sdcard/Pictures/MHCClFixtureCurrent
+adb shell rm -f /sdcard/Pictures/MHCClFixtureCurrent/current.png
 for f in "$FIXTURE_SRC"/tests/image-fixtures/generated/*.png; do
-  adb push "$f" /sdcard/Download/MHCClFixtures/
-  adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file:///sdcard/Download/MHCClFixtures/$(basename "$f")" >/dev/null || true
+  adb push "$f" /data/local/tmp/MHCClFixtures/
 done
-log FIXTURES "pushed_to=/sdcard/Download/MHCClFixtures"
+log FIXTURES "staged_private=/data/local/tmp/MHCClFixtures"
 
 dump_ui(){
   adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
@@ -83,15 +85,23 @@ tap_node(){
   sleep 1
 }
 
-select_file(){
+publish_fixture(){
   local filename="$1"
-  # DocumentsUI may open in Recents. Prefer direct filename if visible;
-  # otherwise enter Downloads / MHCClFixtures.
-  if ! wait_node "$filename" 4; then
-    if wait_node "Downloads" 5; then tap_node "Downloads"; fi
-    if wait_node "MHCClFixtures" 5; then tap_node "MHCClFixtures"; fi
+  local src="/data/local/tmp/MHCClFixtures/$filename"
+  local dst="/sdcard/Pictures/MHCClFixtureCurrent/current.png"
+  adb shell cp "$src" "$dst"
+  adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$dst" >/dev/null || true
+  sleep 2
+  log PUBLISH_FIXTURE "$filename -> $dst"
+}
+
+select_active_photo(){
+  wait_node "Photos" 20 || fail "Android Photo Picker did not open"
+  if wait_node "Dismiss" 2; then
+    tap_node "Dismiss"
   fi
-  tap_node "$filename"
+  wait_node "Photo taken" 30 || fail "active fixture not visible in Android Photo Picker"
+  tap_node "Photo taken"
   sleep 2
 }
 
@@ -107,14 +117,16 @@ shot 00_launch
 tap_node "Save my first outfit"
 tap_node "+ Add a piece"
 tap_node "Top"
+publish_fixture "top_white_01.png"
 tap_node "Choose local photo"
-select_file "top_white_01.png"
+select_active_photo
 wait_node "Remove photo" 30 || fail "top photo did not attach"
 shot 01_top_attached
 
 # Replace through real picker.
+publish_fixture "replacement_test.png"
 tap_node "Replace local photo"
-select_file "replacement_test.png"
+select_active_photo
 wait_node "Remove photo" 30 || fail "replacement photo did not attach"
 shot 02_replaced
 tap_node "Add to outfit"
@@ -122,13 +134,14 @@ tap_node "Add to outfit"
 # Bottom: exercise picker cancel then select.
 tap_node "+ Add a piece"
 tap_node "Bottom"
+publish_fixture "bottom_black_01.png"
 tap_node "Choose local photo"
 sleep 2
 adb shell input keyevent 4
 log PICKER_CANCEL "real Android Back in system picker"
 wait_node "Choose local photo" 20 || fail "picker cancel did not return cleanly"
 tap_node "Choose local photo"
-select_file "bottom_black_01.png"
+select_active_photo
 wait_node "Remove photo" 30 || fail "bottom photo did not attach"
 tap_node "Add to outfit"
 shot 03_two_pieces
@@ -156,11 +169,13 @@ fi
 tap_node "Save"
 tap_node "+ Add a piece"
 tap_node "Outer"
+publish_fixture "tiny_boundary.png"
 tap_node "Choose local photo"
-select_file "tiny_boundary.png"
+select_active_photo
 wait_node "Remove photo" 30 || fail "tiny image did not attach"
+publish_fixture "large_memory_smoke.png"
 tap_node "Replace local photo"
-select_file "large_memory_smoke.png"
+select_active_photo
 wait_node "Remove photo" 40 || fail "large image did not attach"
 shot 06_large_image
 tap_node "Cancel"
