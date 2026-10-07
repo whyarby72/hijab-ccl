@@ -1,0 +1,49 @@
+name: android-test-build
+
+on:
+  push:
+    branches:
+      - android-test-implementation-v0.1
+  pull_request:
+    paths:
+      - "android/**"
+      - "prototype/index.html"
+
+permissions:
+  contents: read
+
+jobs:
+  build-android-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Gradle 9.4.1
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.4.1"
+          cache-provider: basic
+
+      - name: Ensure Android SDK 36
+        shell: bash
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Verify canonical prototype and build debug APK
+        working-directory: android
+        run: |
+          gradle :androidApp:verifyPrototypeSha :androidApp:assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: hijab-ccl-android-test-debug
+          path: android/androidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
