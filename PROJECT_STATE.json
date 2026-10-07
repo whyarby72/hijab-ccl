@@ -1,6 +1,6 @@
 {
   "schema": "mhccl_project_state_closure_v1",
-  "task_id": "MHCCl-PUBLIC-GITHUB-BOOTSTRAP-001",
+  "task_id": "MHCCl-ANDROID-EMULATOR-VERIFICATION-002",
   "product_decision": "TEST",
   "production_build_authorized": false,
   "artifact_freeze_authorized": false,
@@ -21,18 +21,33 @@
     "escaped_mutations": 0,
     "adversarial": "6/6 PASS"
   },
-  "acceptance": {"AC-001":"PASS","AC-002":"PASS","AC-003":"PASS","AC-004":"PASS","AC-005":"PASS","AC-006":"PASS","AC-007":"PASS","AC-008":"PASS","AC-009":"PASS","AC-010":"PASS","AC-011":"PASS","AC-012":"PASS","AC-013":"PASS","AC-014":"PASS","AC-015":"PASS","AC-016":"PASS"},
+  "acceptance": {
+    "AC-001": "PASS",
+    "AC-002": "PASS",
+    "AC-003": "PASS",
+    "AC-004": "PASS",
+    "AC-005": "PASS",
+    "AC-006": "PASS",
+    "AC-007": "PASS",
+    "AC-008": "PASS",
+    "AC-009": "PASS",
+    "AC-010": "PASS",
+    "AC-011": "PASS",
+    "AC-012": "PASS",
+    "AC-013": "PASS",
+    "AC-014": "PASS",
+    "AC-015": "PASS",
+    "AC-016": "PASS"
+  },
   "environment_manual_hold": [
-    "physical Android",
-    "TalkBack",
-    "real system Back",
-    "declared final browser/file/origin runtime",
-    "target-environment storage close/reopen",
-    "Android text/font scaling",
-    "real photo picker",
-    "Matrix touch gestures",
-    "Downloads retrieval",
-    "safe-area/system UI",
+    "physical Android confirmation",
+    "real system/gesture Back on physical Android",
+    "physical TalkBack Matrix semantics",
+    "direct local-file/OEM file-provider behavior",
+    "physical Matrix gesture smoke",
+    "real-device photo picker smoke",
+    "real-device Downloads/export smoke",
+    "physical font/safe-area smoke",
     "8-tester behavioral cohort"
   ],
   "repository": {
@@ -45,7 +60,45 @@
     "ci_result": "PASS",
     "actions_run_url": "https://github.com/whyarby72/hijab-ccl/actions/runs/37543284153",
     "actions_run_id": 37543284153,
-    "next_owner": "ChatGPT AI-PROD reconciliation"
+    "next_owner": "Physical Android confirmation",
+    "emulator_summary_published": true,
+    "emulator_summary_commit_sha": "b439049bdb380fe72368256019e41489a319fb8b"
   },
-  "final_status": "PUBLIC_GITHUB_BOOTSTRAP_PASS"
+  "final_status": "ANDROID_EMULATOR_PASS_WITH_HOLDS",
+  "emulator_verification": {
+    "status": "ANDROID_EMULATOR_PASS_WITH_HOLDS",
+    "candidate_commit": "8111445674e42a24ef5e77e5c191fef1f0f4aa0e",
+    "candidate_sha256": "861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171",
+    "source_changed": false,
+    "emulator_profile": "task-s3-api36",
+    "android_api": 36,
+    "chrome_version": "133.0.6943.137",
+    "runtime_mode": "localhost_exact_candidate",
+    "deterministic": "81/81 PASS",
+    "mutations": "27/27 detected",
+    "escaped_mutations": 0,
+    "passed_areas": [
+      "launch/render",
+      "first save",
+      "reload persistence",
+      "piece reuse",
+      "duplicate decision",
+      "third-save flow",
+      "Capsule Matrix",
+      "text/display scaling",
+      "photo picker",
+      "Availability",
+      "sanitized exports",
+      "Downloads retrieval",
+      "persistence/recovery"
+    ],
+    "holds": [
+      "ADB Back delivered browser task navigation; state restored after reopening",
+      "TalkBack installed but not enabled",
+      "Chrome update flow unavailable in emulator environment"
+    ],
+    "product_p0": 0,
+    "product_p1": 0,
+    "public_summary_path": "docs/selected-audits/ANDROID_EMULATOR_VERIFICATION_SUMMARY_v2.0.md"
+  }
 }
