@@ -2,6 +2,7 @@ package com.aiprod.hijabccl
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.pm.ApplicationInfo
 import android.content.ContentValues
 import android.content.Intent
 import android.net.Uri
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
         setContentView(webView)
 
         CookieManager.getInstance().setAcceptCookie(false)
-        WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG)
+        WebView.setWebContentsDebuggingEnabled((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0)
 
         with(webView.settings) {
             javaScriptEnabled = true
