@@ -34,7 +34,23 @@ jobs:
       - name: Ensure Android SDK 36
         shell: bash
         run: |
-          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "ANDROID_SDK_ROOT/ANDROID_HOME is not set" >&2
+            exit 1
+          fi
+
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1 || true)"
+          fi
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT" >&2
+            exit 1
+          fi
+
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Verify canonical prototype and build debug APK
         working-directory: android
