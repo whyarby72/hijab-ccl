@@ -82,11 +82,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: |
-            python tests/image-fixtures/emulator_photo_lifecycle.py \
-              --apk android/androidApp/build/outputs/apk/debug/androidApp-debug.apk \
-              --fixtures build/image-fixtures \
-              --evidence build/image-emulator-evidence
+          script: python tests/image-fixtures/emulator_photo_lifecycle.py --apk android/androidApp/build/outputs/apk/debug/androidApp-debug.apk --fixtures build/image-fixtures --evidence build/image-emulator-evidence
 
       - name: Upload replayable image fixtures
         if: always()
