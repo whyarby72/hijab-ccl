@@ -268,7 +268,7 @@ def main():
     launch()
     cdp=CDP()
     try:
-        cdp.wait("typeof S!=='undefined' && typeof APP!=='undefined'",20,label="candidate globals")
+        cdp.wait("typeof window.APP==='object' && !!document.querySelector('#app')",20,label="candidate app contract")
         candidate=cdp.eval("document.documentElement.innerHTML.includes('Capsule Matrix')")
         if not candidate: raise RuntimeError("canonical candidate did not render")
 
@@ -276,11 +276,11 @@ def main():
         cdp.eval("localStorage.clear(); location.reload(); true")
         time.sleep(1.0)
         cdp.close(); cdp=CDP()
-        cdp.wait("typeof S!=='undefined' && S.screen==='launch'",20,label="clean launch")
+        cdp.wait(sx("S.screen==='launch'"),20,label="clean launch")
         capture(evidence,"00_clean_launch")
 
-        cdp.eval("APP.startFirst(); APP.openAdd(); APP.pickCat('TOP'); true")
-        cdp.wait("S.screen==='builder' && S.addOpen && S.addForm.category==='TOP'",10,label="TOP add form")
+        cdp.eval("window.APP.startFirst(); window.APP.openAdd(); window.APP.pickCat('TOP'); true")
+        cdp.wait(sx("S.screen==='builder' && S.addOpen && S.addForm.category==='TOP'"),10,label="TOP add form")
 
         first=select_photo(cdp,"top_white_01.jpg")
         record("IMG01_INITIAL_PICK","PASS",first)
@@ -290,8 +290,8 @@ def main():
         if replacement["sha256"]==first["sha256"]: raise RuntimeError("replacement did not change processed photo")
         record("IMG02_REPLACE","PASS",{"before":first,"after":replacement})
 
-        cdp.eval("APP.removeAddPhoto(); true")
-        cdp.wait("S.addForm && !S.addForm.imageData && !S.addForm.photoPending",10,label="remove photo")
+        cdp.eval("window.APP.removeAddPhoto(); true")
+        cdp.wait(sx("S.addForm && !S.addForm.imageData && !S.addForm.photoPending"),10,label="remove photo")
         record("IMG03_REMOVE","PASS",{"imageDataEmpty":True})
 
         # Re-add then cancel a second picker invocation; existing selected photo must survive.
@@ -304,23 +304,26 @@ def main():
         if after_cancel["sha256"]!=restored["sha256"]: raise RuntimeError("picker cancel changed existing photo")
         record("IMG04_PICKER_CANCEL","PASS",{"before":restored,"after":after_cancel})
 
-        cdp.eval("APP.addDraftGarment(); true")
-        cdp.wait("S.draft && S.draft.draftGarments.length===1 && !!S.draft.draftGarments[0].imageData",10,label="first draft photo commit")
+        cdp.eval("window.APP.addDraftGarment(); true")
+        cdp.wait(sx("S.draft && S.draft.draftGarments.length===1 && !!S.draft.draftGarments[0].imageData"),10,label="first draft photo commit")
 
-        cdp.eval("APP.openAdd(); APP.pickCat('BOTTOM'); true")
+        cdp.eval("window.APP.openAdd(); window.APP.pickCat('BOTTOM'); true")
         bottom=select_photo(cdp,"bottom_black_01.jpg")
-        cdp.eval("APP.addDraftGarment(); true")
-        cdp.wait("S.draft.draftGarments.length===2 && S.draft.draftGarments.every(g=>!!g.imageData)",10,label="two photo drafts")
-        ownership=cdp.eval("""(()=>({
-          categories:S.draft.draftGarments.map(g=>g.category),
-          distinct:S.draft.draftGarments[0].imageData!==S.draft.draftGarments[1].imageData
-        }))()""")
+        cdp.eval("window.APP.addDraftGarment(); true")
+        cdp.wait(sx("S.draft.draftGarments.length===2 && S.draft.draftGarments.every(g=>!!g.imageData)"),10,label="two photo drafts")
+        ownership=cdp.eval("""(()=>{
+          const S=JSON.parse(localStorage.getItem('mhccl_v31e_ui_copy_accessibility_candidate_state')||'{}');
+          return {
+            categories:S.draft.draftGarments.map(g=>g.category),
+            distinct:S.draft.draftGarments[0].imageData!==S.draft.draftGarments[1].imageData
+          };
+        })()""")
         if ownership["categories"]!=["TOP","BOTTOM"] or not ownership["distinct"]:
             raise RuntimeError("draft image ownership separation failed")
         record("IMG05_MULTI_DRAFT_OWNERSHIP","PASS",{"top":restored,"bottom":bottom,"ownership":ownership})
 
         # Transparent PNG -> product compressor must yield JPEG.
-        cdp.eval("APP.openAdd(); APP.pickCat('HIJAB'); true")
+        cdp.eval("window.APP.openAdd(); window.APP.pickCat('HIJAB'); true")
         transparent=select_photo(cdp,"transparent_hijab.png")
         if not transparent["prefix"].startswith("data:image/jpeg"):
             raise RuntimeError("transparent PNG was not normalized to JPEG")
@@ -328,7 +331,7 @@ def main():
         record("IMG06_TRANSPARENT_PNG","PASS",{"signature":transparent,"dims":dims_png})
 
         # Small boundary image.
-        cdp.eval("APP.removeAddPhoto(); true")
+        cdp.eval("window.APP.removeAddPhoto(); true")
         small=select_photo(cdp,"boundary_small_64.png")
         dims_small=js_image_dims(cdp)
         if (dims_small["w"],dims_small["h"]) != (64,64):
@@ -336,18 +339,18 @@ def main():
         record("IMG07_SMALL_BOUNDARY","PASS",{"signature":small,"dims":dims_small})
 
         # Large portrait compression => 420x560.
-        cdp.eval("APP.removeAddPhoto(); APP.pickCat('DRESS'); true")
+        cdp.eval("window.APP.removeAddPhoto(); window.APP.pickCat('DRESS'); true")
         large=select_photo(cdp,"large_portrait_test.jpg")
         dims_large=js_image_dims(cdp)
         if max(dims_large["w"],dims_large["h"])>560 or (dims_large["w"],dims_large["h"])!=(420,560):
             raise RuntimeError(f"large image compression mismatch: {dims_large}")
         record("IMG08_LARGE_COMPRESSION","PASS",{"signature":large,"dims":dims_large})
-        cdp.eval("APP.addDraftGarment(); true")
-        cdp.wait("S.draft.draftGarments.length===3",10,label="three drafts")
+        cdp.eval("window.APP.addDraftGarment(); true")
+        cdp.wait(sx("S.draft.draftGarments.length===3"),10,label="three drafts")
 
         before_save=state(cdp)
-        cdp.eval("APP.saveDraftOutfit(); true")
-        cdp.wait("S.screen==='success' && S.outfits.length===1 && S.garments.length===3",15,label="save outfit with photos")
+        cdp.eval("window.APP.saveDraftOutfit(); true")
+        cdp.wait(sx("S.screen==='success' && S.outfits.length===1 && S.garments.length===3"),15,label="save outfit with photos")
         saved=state(cdp)
         if not all(x["hasPhoto"] for x in saved["committed"]):
             raise RuntimeError("committed garment missing photo")
@@ -358,7 +361,7 @@ def main():
         cdp.close()
         launch()
         cdp=CDP()
-        cdp.wait("typeof S!=='undefined' && S.outfits.length===1 && S.garments.length===3",20,label="restart persistence")
+        cdp.wait(sx("S.outfits.length===1 && S.garments.length===3"),20,label="restart persistence")
         persisted=state(cdp)
         if not all(x["hasPhoto"] for x in persisted["committed"]):
             raise RuntimeError("photo persistence failed after process restart")
