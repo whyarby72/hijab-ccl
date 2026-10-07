@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hijab Capsule Closet Lite</string>
+    <string name="export_saved">Export saved</string>
+    <string name="export_failed">Export could not be saved</string>
+</resources>
