@@ -38,13 +38,29 @@ done
 log FIXTURES "staged_private=/data/local/tmp/MHCClFixtures"
 
 dump_ui(){
-  adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
-  adb pull /sdcard/window.xml /tmp/window.xml >/dev/null 2>&1 || true
+  rm -f /tmp/window.xml
+  adb shell rm -f /sdcard/window.xml >/dev/null 2>&1 || true
+  for _ in $(seq 1 5); do
+    if adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 &&
+       adb pull /sdcard/window.xml /tmp/window.xml >/dev/null 2>&1 &&
+       python3 - <<'PY' >/dev/null 2>&1
+import xml.etree.ElementTree as ET
+root=ET.parse('/tmp/window.xml').getroot()
+assert root.tag == 'hierarchy'
+assert any(n.attrib.get('class') == 'android.webkit.WebView' for n in root.iter('node'))
+PY
+    then
+      return 0
+    fi
+    rm -f /tmp/window.xml
+    sleep 0.5
+  done
+  return 1
 }
 
 node_bounds(){
   local needle="$1"
-  dump_ui
+  dump_ui || return 2
   python3 - "$needle" <<'PY'
 import sys, re, xml.etree.ElementTree as ET
 needle=sys.argv[1]
