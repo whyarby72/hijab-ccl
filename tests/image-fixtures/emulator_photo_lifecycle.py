@@ -65,10 +65,11 @@ class CDP:
                 with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json",timeout=2) as r:
                     arr=json.load(r)
                 pages=[x for x in arr if x.get("type")=="page" and x.get("webSocketDebuggerUrl")]
-                return pages[0] if pages else None
+                exact=[x for x in pages if "appassets.androidplatform.net/assets/index.html" in (x.get("url") or "")]
+                return exact[0] if exact else None
             except Exception:
                 return None
-        t=wait_until(target,20,label="CDP page")
+        t=wait_until(target,25,label="canonical CDP page")
         self.ws=websocket.create_connection(t["webSocketDebuggerUrl"], timeout=10, suppress_origin=True)
         self.i=0
         self.call("Runtime.enable",{})
