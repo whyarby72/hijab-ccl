@@ -152,36 +152,60 @@ def foreground():
             return line.strip()
     return ""
 
-def pick_document(filename):
-    # DocumentsUI normally exposes freshly pushed images in Recents.
-    stem=Path(filename).stem
-    try:
-        return tap_named([filename,stem],10)
-    except Exception:
-        pass
+def media_index_probe(filename):
+    # Test-only adb observation. Device MediaStore is the provider of the gallery.
+    query=adb("shell","content","query",
+        "--uri","content://media/external/images/media",
+        "--projection","_id:_display_name:mime_type:relative_path",
+        "--where","_display_name='"+filename+"'",check=False)
+    rows=query.stdout.strip()
+    return {"returncode":query.returncode,"found":query.returncode==0 and "Row:" in rows
+            and filename in rows,"stdout":rows[-1400:],"stderr":query.stderr.strip()[-700:]}
 
+def publish_fixture(filename,fixture_dir,evidence):
+    source=fixture_dir/filename
+    if not source.is_file(): raise RuntimeError("FIXTURE_MISSING: "+str(source))
+    target="/sdcard/Pictures/MHCClFixtureCurrent/"+filename
+    adb("shell","mkdir","-p","/sdcard/Pictures/MHCClFixtureCurrent")
+    adb("push",str(source),target)
+    device_hash=adb("shell","sha256sum",target).stdout.split()[0]
+    local_hash=sha256(source)
+    if device_hash!=local_hash:
+        raise RuntimeError("FIXTURE_DEVICE_HASH_MISMATCH: "+filename)
+    adb("shell","touch",target)
+    scan=adb("shell","am","broadcast","-a","android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+             "-d","file://"+target,check=False)
+    # This legacy broadcast is a test-environment trigger, not proof of indexing.
+    # Do not infer visibility from the command's returncode or a fixed sleep.
+    probe=None
+    try:
+        probe=wait_until(lambda: (p if (p:=media_index_probe(filename))["found"] else None),
+                         35,interval=1.0,label="MediaStore indexed "+filename)
+    except Exception:
+        bad=media_index_probe(filename)
+        (evidence/("MEDIA_INDEX_FAIL_"+filename+".json")).write_text(
+            json.dumps({"filename":filename,"device_sha256":device_hash,
+                        "broadcast_exit":scan.returncode,"probe":bad},indent=2)+"\\n")
+        raise RuntimeError("MEDIA_INDEX_NOT_READY: "+filename+"; "+repr(bad))
+    (evidence/("MEDIA_INDEX_"+filename+".json")).write_text(
+        json.dumps({"filename":filename,"source_sha256":local_hash,
+                    "device_sha256":device_hash,"broadcast_exit":scan.returncode,
+                    "probe":probe},indent=2)+"\\n")
+    return probe
+
+def pick_photo_thumbnail(filename,evidence):
+    # The system Photo Picker shows thumbnails, not DocumentsUI filenames.
     root=dump_ui()
-    center,_=find_node(root,["show roots","open navigation drawer"])
-    if center:
-        adb("shell","input","tap",str(center[0]),str(center[1]))
-        time.sleep(.7)
-        try: tap_named(["Downloads","Download"],6)
-        except Exception: pass
-    else:
-        try: tap_named(["Downloads","Download"],4)
-        except Exception: pass
-    time.sleep(.8)
-    try:
-        return tap_named([filename,stem],10)
-    except Exception:
-        pass
-
-    # Last deterministic fallback: use DocumentsUI search.
-    adb("shell","input","keyevent","84",check=False)
-    time.sleep(.5)
-    adb("shell","input","text",stem.replace("_","%s"),check=False)
-    time.sleep(1.2)
-    return tap_named([filename,stem],10)
+    (evidence/("PICKER_UI_"+filename+".xml")).write_bytes(ET.tostring(root,encoding="utf-8"))
+    center,attrs=find_node(root,["Photo taken"])
+    if not center:
+        capture(evidence,"PICKER_NO_THUMBNAIL_"+filename)
+        raise RuntimeError("PHOTO_PICKER_THUMBNAIL_NOT_READY: "+filename)
+    capture(evidence,"PICKER_READY_"+filename)
+    adb("shell","input","tap",str(center[0]),str(center[1]))
+    return {"picker_node_text":attrs.get("text",""),
+            "picker_node_description":attrs.get("content-desc",""),
+            "picker_node_package":attrs.get("package","")}
 
 def capture(outdir,name):
     p=run("adb","exec-out","screencap","-p",check=True,text=False,capture=True)
@@ -214,12 +238,18 @@ def trigger_picker(cdp):
     if not ok: raise RuntimeError("piece-photo input missing")
     wait_until(lambda: PACKAGE not in foreground(),10,label="system picker foreground")
 
-def select_photo(cdp,filename):
+def select_photo(cdp,filename,fixture_dir,evidence):
+    publish_fixture(filename,fixture_dir,evidence)
     trigger_picker(cdp)
-    pick_document(filename)
-    wait_until(lambda: PACKAGE in foreground(),15,label="app foreground after picker")
-    cdp.wait(sx("!!(S.addForm && !S.addForm.photoPending && S.addForm.imageData)"),25,label="photo processed")
-    return js_photo_signature(cdp)
+    picker=pick_photo_thumbnail(filename,evidence)
+    cdp.wait(sx("!!(S.addForm && !S.addForm.photoPending && S.addForm.imageData)"),35,
+             label="photo processed for "+filename)
+    signature=js_photo_signature(cdp)
+    if signature["len"]<100 or not signature["prefix"].startswith("data:image/"):
+        raise RuntimeError("PHOTO_CALLBACK_EMPTY: "+filename)
+    (evidence/("PICKED_"+filename+".json")).write_text(
+        json.dumps({"fixture":filename,"picker":picker,"signature":signature},indent=2)+"\\n")
+    return signature
 
 def state(cdp):
     return cdp.eval("""(()=>{
@@ -258,13 +288,19 @@ def main():
     adb("install","-r",args.apk)
     results["environment"]["apk_sha256"]=sha256(args.apk)
 
-    for p in sorted(fixture_dir.iterdir()):
-        if p.suffix.lower() not in {".jpg",".jpeg",".png"}: continue
-        remote="/sdcard/Download/"+p.name
-        adb("push",str(p),remote)
-        adb("shell","am","broadcast","-a","android.intent.action.MEDIA_SCANNER_SCAN_FILE","-d","file://"+remote,check=False)
-    time.sleep(1)
-
+    # Deliberately do not bulk-publish all images into Downloads.
+    # Historical PASS used one active gallery image per picker operation.
+    adb("shell","rm","-rf","/sdcard/Pictures/MHCClFixtureCurrent")
+    adb("shell","mkdir","-p","/sdcard/Pictures/MHCClFixtureCurrent")
+    manifest_path=fixture_dir/"GENERATED_MANIFEST.json"
+    if not manifest_path.is_file(): raise RuntimeError("GENERATED_MANIFEST_MISSING")
+    manifest=json.loads(manifest_path.read_text(encoding="utf-8"))
+    files={x["file"]:x["sha256"] for x in manifest["fixtures"]}
+    for name,expected in files.items():
+        if sha256(fixture_dir/name)!=expected:
+            raise RuntimeError("FIXTURE_MANIFEST_HASH_MISMATCH: "+name)
+    record("IMG00_FIXTURE_HASH_PREFLIGHT","PASS",
+           {"count":len(files),"fixture_manifest_sha256":sha256(manifest_path)})
     launch()
     cdp=CDP()
     try:
@@ -282,11 +318,11 @@ def main():
         cdp.eval("window.APP.startFirst(); window.APP.openAdd(); window.APP.pickCat('TOP'); true")
         cdp.wait(sx("S.screen==='builder' && S.addOpen && S.addForm.category==='TOP'"),10,label="TOP add form")
 
-        first=select_photo(cdp,"top_white_01.jpg")
+        first=select_photo(cdp,"top_white_01.jpg",fixture_dir,evidence)
         record("IMG01_INITIAL_PICK","PASS",first)
         capture(evidence,"01_initial_top")
 
-        replacement=select_photo(cdp,"replacement_test.jpg")
+        replacement=select_photo(cdp,"replacement_test.jpg",fixture_dir,evidence)
         if replacement["sha256"]==first["sha256"]: raise RuntimeError("replacement did not change processed photo")
         record("IMG02_REPLACE","PASS",{"before":first,"after":replacement})
 
@@ -295,7 +331,7 @@ def main():
         record("IMG03_REMOVE","PASS",{"imageDataEmpty":True})
 
         # Re-add then cancel a second picker invocation; existing selected photo must survive.
-        restored=select_photo(cdp,"top_white_01.jpg")
+        restored=select_photo(cdp,"top_white_01.jpg",fixture_dir,evidence)
         trigger_picker(cdp)
         adb("shell","input","keyevent","4")
         wait_until(lambda: PACKAGE in foreground(),12,label="return after picker cancel")
@@ -308,7 +344,7 @@ def main():
         cdp.wait(sx("S.draft && S.draft.draftGarments.length===1 && !!S.draft.draftGarments[0].imageData"),10,label="first draft photo commit")
 
         cdp.eval("window.APP.openAdd(); window.APP.pickCat('BOTTOM'); true")
-        bottom=select_photo(cdp,"bottom_black_01.jpg")
+        bottom=select_photo(cdp,"bottom_black_01.jpg",fixture_dir,evidence)
         cdp.eval("window.APP.addDraftGarment(); true")
         cdp.wait(sx("S.draft.draftGarments.length===2 && S.draft.draftGarments.every(g=>!!g.imageData)"),10,label="two photo drafts")
         ownership=cdp.eval("""(()=>{
@@ -324,7 +360,7 @@ def main():
 
         # Transparent PNG -> product compressor must yield JPEG.
         cdp.eval("window.APP.openAdd(); window.APP.pickCat('HIJAB'); true")
-        transparent=select_photo(cdp,"transparent_hijab.png")
+        transparent=select_photo(cdp,"transparent_hijab.png",fixture_dir,evidence)
         if not transparent["prefix"].startswith("data:image/jpeg"):
             raise RuntimeError("transparent PNG was not normalized to JPEG")
         dims_png=js_image_dims(cdp)
@@ -332,7 +368,7 @@ def main():
 
         # Small boundary image.
         cdp.eval("window.APP.removeAddPhoto(); true")
-        small=select_photo(cdp,"boundary_small_64.png")
+        small=select_photo(cdp,"boundary_small_64.png",fixture_dir,evidence)
         dims_small=js_image_dims(cdp)
         if (dims_small["w"],dims_small["h"]) != (64,64):
             raise RuntimeError(f"64x64 boundary changed unexpectedly: {dims_small}")
@@ -340,7 +376,7 @@ def main():
 
         # Large portrait compression => 420x560.
         cdp.eval("window.APP.removeAddPhoto(); window.APP.pickCat('DRESS'); true")
-        large=select_photo(cdp,"large_portrait_test.jpg")
+        large=select_photo(cdp,"large_portrait_test.jpg",fixture_dir,evidence)
         dims_large=js_image_dims(cdp)
         if max(dims_large["w"],dims_large["h"])>560 or (dims_large["w"],dims_large["h"])!=(420,560):
             raise RuntimeError(f"large image compression mismatch: {dims_large}")
