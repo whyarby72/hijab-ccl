@@ -7,7 +7,7 @@ sys.path.insert(0, str(HERE.parent / "image-fixtures"))
 
 from emulator_photo_lifecycle import (
     PACKAGE, STATE_EXPR, sx, adb, sha256, wait_until,
-    launch, CDP, capture, select_photo
+    launch, CDP, capture, trigger_picker, tap_named, foreground, js_photo_signature
 )
 
 EXPECTED_HTML_SHA = "861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171"
@@ -27,6 +27,26 @@ def pull_file(remote, local):
     local.parent.mkdir(parents=True,exist_ok=True)
     adb("pull",remote,str(local))
     return local
+
+def publish_fixture(filename):
+    src="/data/local/tmp/MHCClFixtures/"+filename
+    dst="/sdcard/Pictures/MHCClFixtureCurrent/"+filename
+    adb("shell","cp",src,dst)
+    adb("shell","touch",dst)
+    adb("shell","am","broadcast","-a","android.intent.action.MEDIA_SCANNER_SCAN_FILE","-d","file://"+dst,check=False)
+    time.sleep(2)
+
+def select_fixture_photo(cdp, filename):
+    publish_fixture(filename)
+    trigger_picker(cdp)
+    try:
+        tap_named(["Dismiss"],2)
+    except Exception:
+        pass
+    tap_named(["Photo taken"],30)
+    wait_until(lambda: PACKAGE in foreground(),15,label="app foreground after Photo Picker")
+    cdp.wait(sx("!!(S.addForm && !S.addForm.photoPending && S.addForm.imageData)"),25,label="photo processed")
+    return js_photo_signature(cdp)
 
 def snapshot(cdp):
     return cdp.eval("""(()=>{
@@ -96,13 +116,14 @@ def main():
         record("G1_01_INSTALL_CLEAN","PASS",{"package":PACKAGE})
 
         fixture_dir=Path(args.fixtures)
+        adb("shell","rm","-rf","/data/local/tmp/MHCClFixtures",check=False)
+        adb("shell","mkdir","-p","/data/local/tmp/MHCClFixtures")
+        adb("shell","rm","-rf","/sdcard/Pictures/MHCClFixtureCurrent",check=False)
+        adb("shell","mkdir","-p","/sdcard/Pictures/MHCClFixtureCurrent")
         for p in sorted(fixture_dir.iterdir()):
             if p.suffix.lower() not in {".jpg",".jpeg",".png"}:
                 continue
-            remote="/sdcard/Download/"+p.name
-            adb("push",str(p),remote)
-            adb("shell","am","broadcast","-a","android.intent.action.MEDIA_SCANNER_SCAN_FILE","-d","file://"+remote,check=False)
-        time.sleep(1)
+            adb("push",str(p),"/data/local/tmp/MHCClFixtures/"+p.name)
 
         launch()
         cdp=CDP()
@@ -118,7 +139,7 @@ def main():
 
         cdp.eval("window.APP.startFirst(); window.APP.openAdd('TOP'); window.APP.setAddLabel("+json.dumps(LABEL_SENTINEL)+"); true")
         cdp.wait(sx("S.screen==='builder' && S.addOpen && S.addForm.category==='TOP'"),10,label="first TOP form")
-        photo=select_photo(cdp,"top_white_01.jpg")
+        photo=select_fixture_photo(cdp,"top_white_01.jpg")
         cdp.eval("window.APP.addDraftGarment(); window.APP.saveDraftOutfit(); true")
         cdp.wait(sx("S.screen==='success' && S.outfits.length===1 && S.garments.length===1"),15,label="first outfit saved")
         first=snapshot(cdp)
