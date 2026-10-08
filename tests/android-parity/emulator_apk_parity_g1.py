@@ -10,7 +10,7 @@ from emulator_photo_lifecycle import (
     launch, CDP, capture, trigger_picker, tap_named, dump_ui, js_photo_signature
 )
 
-EXPECTED_HTML_SHA = "861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171"
+EXPECTED_HTML_SHA = "f4942b0e54523f3b6d00e0468767e699fbf394a6c9e7c2b40edfc4e703452f0e"
 LABEL_SENTINEL = "PRIVATE_LABEL_SENTINEL_G1"
 NOTE_SENTINEL = "PRIVATE_NOTE_SENTINEL_G1"
 
