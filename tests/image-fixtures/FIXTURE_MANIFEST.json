@@ -1,0 +1,18 @@
+{
+  "schema": "mhccl_image_fixture_manifest_v1",
+  "generator_environment": {"python": "3.x", "pillow": "12.3.0"},
+  "fixture_count": 11,
+  "fixtures": [
+    {"file":"top_white_01.jpg","sha256":"decca0f54b3c4c7c0dd3120b4651e06e14e5ff6cb31c3700968e99a344a12230","bytes":19597,"width":900,"height":1200,"mime":"image/jpeg","scenario":"initial top photo / persistence"},
+    {"file":"bottom_black_01.jpg","sha256":"3f3116aeed6a13927aecf28593a684ddbd1b4cd0f0272d2c606874f0d7f2cb61","bytes":19999,"width":900,"height":1200,"mime":"image/jpeg","scenario":"second garment / ownership separation"},
+    {"file":"dress_beige_01.jpg","sha256":"30ffa1652064aa949e6eebb4ee62052301ee1fcfcfb97c2572d4fee414b0fbf8","bytes":20335,"width":900,"height":1200,"mime":"image/jpeg","scenario":"dress category fixture"},
+    {"file":"outer_olive_01.jpg","sha256":"2239f12fc7d48bf2db550c8f205eb79fd2dffe48465e26fab6d99aa7b4f66970","bytes":14696,"width":900,"height":1200,"mime":"image/jpeg","scenario":"outer category fixture"},
+    {"file":"hijab_taupe_01.jpg","sha256":"969cd5be9658bf7becd0dc3bf2d90f0aeaf138db35b6306a57c6a05be8081602","bytes":20205,"width":900,"height":1200,"mime":"image/jpeg","scenario":"primary hijab fixture"},
+    {"file":"hijab_black_02.jpg","sha256":"54a82f9403b038ed66c5bd95a392bcd93ba3bc1f803f5c8ad1f6124c13e26c23","bytes":18831,"width":900,"height":1200,"mime":"image/jpeg","scenario":"alternate hijab / relation reuse"},
+    {"file":"shoes_neutral_01.jpg","sha256":"45370a8c04259dce0b354b4ea4d5ecd135f1927bc12816d46c08da617121d8f7","bytes":15032,"width":1200,"height":900,"mime":"image/jpeg","scenario":"landscape orientation fixture"},
+    {"file":"replacement_test.jpg","sha256":"c9b5509cdebf394ebc5fb6e4d06d6beee70c061fd33e26ac4d35c13bdf28565d","bytes":20655,"width":900,"height":1200,"mime":"image/jpeg","scenario":"replace-photo scenario"},
+    {"file":"boundary_small_64.png","sha256":"7d60c6e3f88c845313efd7f52b87ae8b95e4fe45c60d9e062ac2858e59c8c57c","bytes":682,"width":64,"height":64,"mime":"image/png","scenario":"minimum-size/boundary image"},
+    {"file":"transparent_hijab.png","sha256":"3137b05314b4060181bd351ebe12bc132155f5a78c041d312a851aa14ea4ed0b","bytes":8769,"width":900,"height":1200,"mime":"image/png","scenario":"PNG alpha/transparency handling"},
+    {"file":"large_portrait_test.jpg","sha256":"c3f3fd3c53ac009709ead31b142a84699ba96bd969d6d9fb08983a5fdb71c9f9","bytes":76069,"width":2400,"height":3200,"mime":"image/jpeg","scenario":"large-image memory/persistence smoke"}
+  ]
+}
