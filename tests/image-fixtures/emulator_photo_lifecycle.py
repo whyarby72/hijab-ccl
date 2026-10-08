@@ -154,13 +154,19 @@ def foreground():
 
 def media_index_probe(filename):
     # Test-only adb observation. Device MediaStore is the provider of the gallery.
+    # Avoid adb-shell quote stripping in --where (API 36 invalid-token error).
+    # Query only metadata rows, then match an exact filename value in Python.
     query=adb("shell","content","query",
         "--uri","content://media/external/images/media",
-        "--projection","_id:_display_name:mime_type:relative_path",
-        "--where","_display_name='"+filename+"'",check=False)
+        "--projection","_id:_display_name:mime_type:relative_path",check=False)
     rows=query.stdout.strip()
-    return {"returncode":query.returncode,"found":query.returncode==0 and "Row:" in rows
-            and filename in rows,"stdout":rows[-1400:],"stderr":query.stderr.strip()[-700:]}
+    expected="_display_name="+filename
+    matches=[line for line in rows.splitlines() if line.startswith("Row:")
+             and expected in [piece.strip() for piece in line.split(",")]]
+    return {"returncode":query.returncode,
+            "found":query.returncode==0 and bool(matches) and not query.stderr.strip(),
+            "matching_rows":matches[:4],
+            "stdout":rows[-1400:],"stderr":query.stderr.strip()[-700:]}
 
 def publish_fixture(filename,fixture_dir,evidence):
     source=fixture_dir/filename
