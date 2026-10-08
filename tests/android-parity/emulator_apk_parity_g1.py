@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, base64, json, sys, time
+import argparse, base64, csv, io, json, sys, time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -7,7 +7,7 @@ sys.path.insert(0, str(HERE.parent / "image-fixtures"))
 
 from emulator_photo_lifecycle import (
     PACKAGE, STATE_EXPR, sx, adb, sha256, wait_until,
-    launch, CDP, capture, trigger_picker, tap_named, foreground, js_photo_signature
+    launch, CDP, capture, trigger_picker, tap_named, dump_ui, js_photo_signature
 )
 
 EXPECTED_HTML_SHA = "861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171"
@@ -219,13 +219,23 @@ def main():
         # foreground Android Activity. This regression was missed in run
         # 37754327348, whose after-Back screenshot showed Android Home.
         time.sleep(0.75)
-        post_back_foreground=foreground()
-        activity_retained=PACKAGE in post_back_foreground
+        # API 36 can return no mCurrentFocus/mFocusedApp from
+        # 'dumpsys window windows' even while the WebView is onscreen.
+        # Inspect the actual native UI hierarchy instead.
+        ui_root=dump_ui()
+        visible_packages=sorted({n.attrib.get("package") for n in ui_root.iter()
+                                  if n.attrib.get("package")})
+        activity_retained=PACKAGE in visible_packages
+        try:
+            page_visibility=cdp.eval("document.visibilityState")
+        except Exception as error:
+            page_visibility="CDP_ERROR:"+repr(error)
         capture(ev/"screenshots","03_duplicate_after_system_back")
         record("G1_06_NATIVE_SYSTEM_BACK_DUPLICATE", "PASS" if activity_retained else "FAIL", {
           "before":before_back,"after":after_back,"event":back_event,
           "activity_retained_after_delayed_finish_window":activity_retained,
-          "foreground_after_back":post_back_foreground
+          "ui_hierarchy_packages":visible_packages,
+          "cdp_page_visibility":page_visibility
         })
         if not activity_retained:
             # Continue independent G1_07–09 checks on a fresh Activity, but
@@ -307,6 +317,20 @@ def main():
           "json":json_name,"csv":csv_name,
           "new_download_files":sorted(after-before),
           "json_sha256":sha256(json_local),"csv_sha256":sha256(csv_local)
+        })
+        # Privacy PASS alone is not a usable CSV. A prior artifact wrote
+        # literal backslash-n delimiters: CSV tools treated all events as
+        # one record. Flag this separately without altering canonical HTML.
+        csv_rows=list(csv.reader(io.StringIO(csv_text,newline="")))
+        csv_column_count=len(csv_rows[0]) if csv_rows else 0
+        csv_shape_valid=(len(csv_rows)>1 and csv_column_count>=7
+                         and all(len(row)==csv_column_count for row in csv_rows))
+        record("G1_08B_CSV_STRUCTURE","PASS" if csv_shape_valid else "FAIL",{
+          "file":csv_name,"sha256":sha256(csv_local),
+          "physical_line_break_count":csv_text.count("\n"),
+          "literal_backslash_n_count":csv_text.count("\\n"),
+          "parsed_rows":len(csv_rows),
+          "columns":csv_column_count
         })
         capture(ev/"screenshots","05_test_tools_after_exports")
 
