@@ -100,7 +100,7 @@ def main():
 
     def record(tid,status,details=None):
         results["tests"].append({"id":tid,"status":status,"details":details or {}})
-        (ev/"RESULTS.json").write_text(json.dumps(results,indent=2)+"\\n",encoding="utf-8")
+        (ev/"RESULTS.json").write_text(json.dumps(results,indent=2)+"\n",encoding="utf-8")
 
     cdp=None
     try:
@@ -213,8 +213,28 @@ def main():
           return [...(S.events||[])].reverse().find(e=>e.event==='android_back_handled')||null;
         })()""")
         ensure(back_event and back_event.get("target")=="duplicate_keep_editing","missing duplicate Back event: "+repr(back_event))
+        # The native Activity has a 250-ms delayed finish guard. A JS state
+        # assertion immediately after Back can PASS while the Activity exits.
+        # Observe beyond that window; do not equate a live CDP socket with a
+        # foreground Android Activity. This regression was missed in run
+        # 37754327348, whose after-Back screenshot showed Android Home.
+        time.sleep(0.75)
+        post_back_foreground=foreground()
+        activity_retained=PACKAGE in post_back_foreground
         capture(ev/"screenshots","03_duplicate_after_system_back")
-        record("G1_06_NATIVE_SYSTEM_BACK_DUPLICATE","PASS",{"before":before_back,"after":after_back,"event":back_event})
+        record("G1_06_NATIVE_SYSTEM_BACK_DUPLICATE", "PASS" if activity_retained else "FAIL", {
+          "before":before_back,"after":after_back,"event":back_event,
+          "activity_retained_after_delayed_finish_window":activity_retained,
+          "foreground_after_back":post_back_foreground
+        })
+        if not activity_retained:
+            # Continue independent G1_07–09 checks on a fresh Activity, but
+            # preserve G1_06 FAIL and NEVER promote overall gate to PASS.
+            cdp.close(); cdp=None
+            launch()
+            cdp=CDP()
+            cdp.wait(sx("S.screen==='builder' && S.draft && S.draft.existingIds.length===1"),
+                     20,label="restore after unexpected native Activity exit")
 
         cdp.eval("window.APP.toggleExisting("+json.dumps(garment_id)+"); window.APP.backFromBuilder(); true")
         cdp.wait(sx("S.screen==='home' && S.outfits.length===1"),10,label="home after duplicate draft exit")
@@ -297,6 +317,9 @@ def main():
         final_state=snapshot(cdp)
         record("G1_09_FINAL_RESTART","PASS",final_state)
 
+        failures=[t["id"] for t in results["tests"] if t["status"]!="PASS"]
+        if failures:
+            raise RuntimeError("G1 checks failed: "+", ".join(failures))
         results["status"]="PASS"
         results["p0"]=0
         results["p1"]=0
@@ -313,7 +336,7 @@ def main():
             if cdp: cdp.close()
         except Exception:
             pass
-        (ev/"RESULTS.json").write_text(json.dumps(results,indent=2)+"\\n",encoding="utf-8")
+        (ev/"RESULTS.json").write_text(json.dumps(results,indent=2)+"\n",encoding="utf-8")
         (ev/"REPORT.md").write_text(
           "# Android APK Emulator Parity G1\\n\\nStatus: **"+results["status"]+"**\\n\\n"
           +"Candidate SHA-256: "+results["candidate"].get("actual_sha256","")+"\\n\\n"
