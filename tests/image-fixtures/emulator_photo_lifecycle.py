@@ -302,7 +302,30 @@ def main():
     record("IMG00_FIXTURE_HASH_PREFLIGHT","PASS",
            {"count":len(files),"fixture_manifest_sha256":sha256(manifest_path)})
     launch()
-    cdp=CDP()
+    cdp=None
+    # Cold emulator startup may expose a WebView socket before its canonical
+    # DevTools target is ready. Bounded retry with environment evidence; never PASS
+    # a photo assertion through a startup retry.
+    for attempt in (1,2):
+        try:
+            cdp=CDP()
+            break
+        except Exception as startup_error:
+            diagnostic={"attempt":attempt,"error":repr(startup_error),
+                        "pid":adb("shell","pidof",PACKAGE,check=False).stdout.strip(),
+                        "focus":foreground(),
+                        "devtools_sockets":[line.strip() for line in adb("shell","cat","/proc/net/unix",check=False).stdout.splitlines() if "webview_devtools_remote" in line][-12:]}
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json",timeout=3) as target_resp:
+                    diagnostic["devtools_targets"]=json.load(target_resp)
+            except Exception as target_error:
+                diagnostic["targets_error"]=repr(target_error)
+            (evidence/("CDP_STARTUP_ATTEMPT_"+str(attempt)+".json")).write_text(
+                json.dumps(diagnostic,indent=2)+"\\n")
+            capture(evidence,"CDP_STARTUP_ATTEMPT_"+str(attempt))
+            if attempt==2: raise
+            launch()
+            time.sleep(2)
     try:
         cdp.wait("typeof window.APP==='object' && !!document.querySelector('#app')",20,label="candidate app contract")
         candidate=cdp.eval("document.documentElement.innerHTML.includes('Capsule Matrix')")
