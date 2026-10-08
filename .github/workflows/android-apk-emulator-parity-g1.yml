@@ -23,6 +23,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Checkout proven image-fixture source
+        uses: actions/checkout@v6
+        with:
+          ref: eacfd37ac5ad4764ae0a309cc2fd7458531b8770
+          path: proven-fixture-src
+
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -37,6 +43,10 @@ jobs:
           python tests/image-fixtures/generate_fixtures.py \
             --out build/image-fixtures \
             --expected tests/image-fixtures/FIXTURE_MANIFEST.json
+
+      - name: Generate proven PNG fixture pack
+        run: |
+          python proven-fixture-src/tests/image-fixtures/generate_fixtures.py
 
       - name: Setup JDK 17
         uses: actions/setup-java@v5
@@ -82,7 +92,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot-load -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
-          script: python tests/android-parity/emulator_apk_parity_g1.py --apk android/androidApp/build/outputs/apk/debug/androidApp-debug.apk --prototype prototype/index.html --fixtures build/image-fixtures --evidence build/android-apk-parity-g1
+          script: python tests/android-parity/emulator_apk_parity_g1.py --apk android/androidApp/build/outputs/apk/debug/androidApp-debug.apk --prototype prototype/index.html --fixtures proven-fixture-src/tests/image-fixtures/generated --evidence build/android-apk-parity-g1
 
       - name: Upload G1 evidence
         if: always()
