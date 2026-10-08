@@ -64,7 +64,7 @@ jobs:
             "handoff_is_not_build_release_or_merge_authorization":true
           }
           EOF
-          (cd snapshot && find . -type f -print0 | sort -z | xargs -0 sha256sum) > snapshot/SOURCE_FILES_SHA256.txt
+          (cd snapshot && find . -type f ! -name SOURCE_FILES_SHA256.txt -print0 | sort -z | xargs -0 sha256sum) > snapshot/SOURCE_FILES_SHA256.txt
           echo "source snapshot ready"
       - name: Upload repository source snapshots
         uses: actions/upload-artifact@v4
