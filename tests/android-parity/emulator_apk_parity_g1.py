@@ -179,15 +179,17 @@ def main():
         cdp=CDP()
         cdp.wait(sx("S.outfits.length===1 && S.garments.length===1 && !!S.garments[0].imageData"),20,label="seeded fixture reload")
         capture(ev/"screenshots","01_first_saved_with_fixture")
-        record("G1_04_PHOTO_FIXTURE_EVIDENCE","PASS",{
-          "picker_evidence":"INHERITED_ARTIFACT_BOUND",
+        record("G1_04_PHOTO_FIXTURE_EVIDENCE","HOLD",{
+          "picker_evidence":"HISTORICAL_ONLY_NOT_FRESH_APK",
           "picker_run_id":37595787404,
           "picker_evidence_artifact_id":11469799879,
-          "canonical_sha256":EXPECTED_HTML_SHA,
+          "historical_canonical_sha256":"861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171",
+          "current_candidate_sha256":EXPECTED_HTML_SHA,
+          "fresh_picker_on_current_apk":"UNVERIFIED",
           "main_activity_git_blob":"5527da51e74fbca15c9094221a64eb2f1106c1ca",
           "seeded_fixture":"top_white_01.png",
           "seeded_fixture_sha256":fixture_sha,
-          "seed_usage":"privacy_and_persistence_test_setup_only",
+          "seed_usage":"privacy_and_persistence_test_setup_only_NOT_PICKER_PROOF",
           "outfit_id":outfit_id
         })
 
