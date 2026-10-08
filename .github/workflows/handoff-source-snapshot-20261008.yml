@@ -1,0 +1,75 @@
+name: handoff-source-snapshot-20261008
+on:
+  push:
+    branches: [handoff-snapshot-20261008]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout pinned canonical main
+        uses: actions/checkout@v4
+        with:
+          ref: c4ff8d29a0f9ca8e43f98b00db16a18ae74a8981
+          path: snapshot/MAIN_CANONICAL
+          persist-credentials: false
+      - name: Checkout pinned Android TEST branch
+        uses: actions/checkout@v4
+        with:
+          ref: a26547e51985d9fd922b0657f2d096f977d0275a
+          path: snapshot/ANDROID_TEST
+          persist-credentials: false
+      - name: Checkout pinned image fixture branch
+        uses: actions/checkout@v4
+        with:
+          ref: 9239f65990f965aa3a9b5cba36dc0ac10e1d22eb
+          path: snapshot/IMAGE_FIXTURE_TEST
+          persist-credentials: false
+      - name: Generate image fixtures from pinned source
+        run: python3 snapshot/IMAGE_FIXTURE_TEST/tests/image-fixtures/generate_fixtures.py > /tmp/fixture_generator_output.txt
+      - name: Verify candidate and manifest, remove .git, produce SHA manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(sha256sum snapshot/MAIN_CANONICAL/prototype/index.html | cut -d' ' -f1)"
+          expected="861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171"
+          test "$actual" = "$expected"
+          test "$(sha256sum snapshot/ANDROID_TEST/prototype/index.html | cut -d' ' -f1)" = "$expected"
+          test "$(sha256sum snapshot/IMAGE_FIXTURE_TEST/prototype/index.html | cut -d' ' -f1)" = "$expected"
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path("snapshot/IMAGE_FIXTURE_TEST/tests/image-fixtures/generated")
+          m=json.loads((root/"manifest.json").read_text())
+          for f in m["fixtures"]:
+              path=root/f["filename"]
+              assert path.is_file()
+              assert hashlib.sha256(path.read_bytes()).hexdigest()==f["sha256"]
+              assert path.stat().st_size==f["bytes"]
+          assert len(m["fixtures"]) == 10
+          print("Fixture manifest PASS",len(m["fixtures"]))
+          PY
+          for d in snapshot/*/.git; do rm -rf "$d"; done
+          cat > snapshot/SOURCE_PINS.json <<'EOF'
+          {
+            "repository":"whyarby72/hijab-ccl",
+            "main":"c4ff8d29a0f9ca8e43f98b00db16a18ae74a8981",
+            "android_test":"a26547e51985d9fd922b0657f2d096f977d0275a",
+            "image_fixture_test":"9239f65990f965aa3a9b5cba36dc0ac10e1d22eb",
+            "candidate_sha256":"861f38ff85f11e6c53d9b0b0f6166b5e6386accca0572a41d108680eb593c171",
+            "project_decision":"TEST",
+            "g1_latest_run":37754327348,
+            "g1_latest_status":"FAIL",
+            "handoff_is_not_build_release_or_merge_authorization":true
+          }
+          EOF
+          (cd snapshot && find . -type f -print0 | sort -z | xargs -0 sha256sum) > snapshot/SOURCE_FILES_SHA256.txt
+          echo "source snapshot ready"
+      - name: Upload repository source snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: mhccl-20261008-source-snapshots
+          path: snapshot/
+          if-no-files-found: error
+          retention-days: 30
