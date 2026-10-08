@@ -158,7 +158,7 @@ def media_index_probe(filename):
     # Query only metadata rows, then match an exact filename value in Python.
     query=adb("shell","content","query",
         "--uri","content://media/external/images/media",
-        "--projection","_id:_display_name:mime_type:relative_path",check=False)
+        "--projection","_id:_display_name:mime_type:relative_path:is_pending:is_trashed:date_added",check=False)
     rows=query.stdout.strip()
     expected="_display_name="+filename
     matches=[line for line in rows.splitlines() if line.startswith("Row:")
@@ -200,18 +200,51 @@ def publish_fixture(filename,fixture_dir,evidence):
     return probe
 
 def pick_photo_thumbnail(filename,evidence):
-    # The system Photo Picker shows thumbnails, not DocumentsUI filenames.
-    root=dump_ui()
+    # Real Android Photo Picker may lag behind MediaStore insertion. Wait for
+    # the gallery *UI* to render a selectable thumbnail, not for an arbitrary
+    # fixed delay, and never fall back to DocumentsUI while claiming picker PASS.
+    deadline=time.time()+45
+    attempt=0
+    root=None
+    center=None
+    attrs=None
+    while time.time()<deadline:
+        attempt+=1
+        root=dump_ui()
+        center,attrs=find_node(root,["Photo taken"])
+        if center: break
+        if attempt==12:
+            # Refresh the provider-backed page once through the actual UI tabs.
+            album,_=find_node(root,["Albums"])
+            if album:
+                adb("shell","input","tap",str(album[0]),str(album[1]))
+                time.sleep(1.0)
+                root=dump_ui()
+                photos,_=find_node(root,["Photos"])
+                if photos:
+                    adb("shell","input","tap",str(photos[0]),str(photos[1]))
+        time.sleep(1)
     (evidence/("PICKER_UI_"+filename+".xml")).write_bytes(ET.tostring(root,encoding="utf-8"))
-    center,attrs=find_node(root,["Photo taken"])
     if not center:
         capture(evidence,"PICKER_NO_THUMBNAIL_"+filename)
-        raise RuntimeError("PHOTO_PICKER_THUMBNAIL_NOT_READY: "+filename)
+        # The index row and actual Photo Picker rendering are separate gates.
+        empty,_=find_node(root,["No photos or videos"])
+        diagnostic={"filename":filename,"attempts":attempt,
+                    "picker_empty":bool(empty),
+                    "media_index":media_index_probe(filename),
+                    "picker_provider":"com.google.android.providers.media.module",
+                    "provider_package_info":adb("shell","dumpsys","package",
+                        "com.google.android.providers.media.module",check=False).stdout[-4500:]}
+        (evidence/("PICKER_NOT_READY_"+filename+".json")).write_text(
+            json.dumps(diagnostic,indent=2)+"\\n")
+        raise RuntimeError("PHOTO_PICKER_THUMBNAIL_NOT_READY: "+filename+
+                           "; media_index_found="+str(diagnostic["media_index"]["found"]))
     capture(evidence,"PICKER_READY_"+filename)
     adb("shell","input","tap",str(center[0]),str(center[1]))
     return {"picker_node_text":attrs.get("text",""),
             "picker_node_description":attrs.get("content-desc",""),
-            "picker_node_package":attrs.get("package","")}
+            "picker_node_package":attrs.get("package",""),
+            "readiness_probes":attempt}
 
 def capture(outdir,name):
     p=run("adb","exec-out","screencap","-p",check=True,text=False,capture=True)
