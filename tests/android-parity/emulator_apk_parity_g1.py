@@ -19,8 +19,13 @@ def ensure(cond, msg):
         raise RuntimeError(msg)
 
 def list_downloads():
-    p = adb("shell","find","/sdcard/Download","-maxdepth","1","-type","f","-printf","%f\\n",check=False)
-    return [x.strip() for x in (p.stdout or "").splitlines() if x.strip()]
+    # Android toybox find does not reliably implement GNU find -printf.
+    # This check must not silently produce an empty list on unsupported flags.
+    p = adb("shell","ls","-1","/sdcard/Download",check=False)
+    if p.returncode != 0:
+        raise RuntimeError("Downloads listing failed: "+repr(p.stderr))
+    return [x.strip().rstrip("\\r") for x in (p.stdout or "").splitlines()
+            if x.strip() and not x.startswith("ls:")]
 
 def pull_file(remote, local):
     local=Path(local)
@@ -257,7 +262,14 @@ def main():
         cdp.eval("window.APP.exportJSON(); window.APP.exportCSV(); true")
         json_name="mhccl_"+session_id+"_evidence_sanitized.json"
         csv_name="mhccl_"+session_id+"_events.csv"
-        wait_until(lambda: json_name in list_downloads() and csv_name in list_downloads(),25,label="native export files in Downloads")
+        try:
+            wait_until(lambda: json_name in list_downloads() and csv_name in list_downloads(),25,label="native export files in Downloads")
+        except TimeoutError:
+            print("EXPORT_DEBUG expected:",json_name,csv_name,flush=True)
+            print("EXPORT_DEBUG actual:",list_downloads(),flush=True)
+            print("EXPORT_DEBUG native bridge:",cdp.eval("typeof NativeDownloads"),flush=True)
+            print("EXPORT_DEBUG hook installed:",cdp.eval("!!window.__mhcclNativeDownloadInstalled"),flush=True)
+            raise
         after=set(list_downloads())
 
         json_local=pull_file("/sdcard/Download/"+json_name,ev/"exports"/json_name)
