@@ -139,7 +139,7 @@ def main():
 
         cdp.eval("window.APP.startFirst(); window.APP.openAdd('TOP'); window.APP.setAddLabel("+json.dumps(LABEL_SENTINEL)+"); true")
         cdp.wait(sx("S.screen==='builder' && S.addOpen && S.addForm.category==='TOP'"),10,label="first TOP form")
-        photo=select_fixture_photo(cdp,"transparent_hijab.png")
+        photo=select_fixture_photo(cdp,"top_white_01.png")
         cdp.eval("window.APP.addDraftGarment(); window.APP.saveDraftOutfit(); true")
         cdp.wait(sx("S.screen==='success' && S.outfits.length===1 && S.garments.length===1"),15,label="first outfit saved")
         first=snapshot(cdp)
